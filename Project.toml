@@ -2,9 +2,11 @@ name = "End-to-end-hint3"
 authors = ["Ziyi Yin and Rafael Orozco"]
 
 [deps]
+BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 ImageQualityIndexes = "2996bd0c-7a13-11e9-2da2-2f5ce47296a9"
+InvertibleNetworks = "b7115f24-5f92-4794-81e8-23b0ddb121d3"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
