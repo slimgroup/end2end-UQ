@@ -17,7 +17,7 @@ if ~isfile(conc_path)
     run(`wget https://www.dropbox.com/s/mzi0xgr0z3l553a/'
         'conc_gridspacing15.0.mat -q -O $conc_path`)
 end
-if ~isfile(conc_path)
+if ~isfile(grad_path)
     run(`wget https://www.dropbox.com/s/ckb6o0ywcfaamzg/'
         'nrec=960_nsample=1100_nsrc=32_nssample=4_ntrain=1000_nv=5_nvalid=100_snr=10.0_upsample=2.jld2 -q -O $grad_path`)
 end
