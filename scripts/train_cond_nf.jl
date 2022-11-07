@@ -292,7 +292,6 @@ for e=1:n_epochs
 			save_dict;
 			safe=true
 		);
-		G = G |> gpu;
     end
 
   #   if(mod(e,save_every)==0) 
