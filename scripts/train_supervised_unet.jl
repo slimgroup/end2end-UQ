@@ -97,7 +97,7 @@ for e=1:n_epochs # epoch loop
     append!(loss_val, f_val_total / n_batches_val)
 
     if mod(e, plot_every) == 0
-        X  = X_val[:,:,1,sample_viz]
+        X  = X_val[:,:,:,sample_viz]
         Y  = Y_val[:,:,:,sample_viz:sample_viz]
 
         # Plot current performance
