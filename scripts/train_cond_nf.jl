@@ -195,7 +195,7 @@ for e=1:n_epochs
     append!(l2_cm_val, cm_l2_val)
 
     if(mod(e,plot_every)==0) 
-	    testmode!(h1, true)
+	    #testmode!(h1, true)
 	    
 	    x      = X_val[:,:,:,sample_viz:sample_viz];
 	    y      = Y_val[:,:,:,sample_viz:sample_viz];
