@@ -96,7 +96,8 @@ vmin = minimum(X_train)
 # Training hyperparameters 
 device = gpu
 lr = 4f-3
-clipnorm_val = 10f0
+lr_step   = 10
+clipnorm_val = 20f0
 noise_lev_x  = 0.01f0
 batch_size   = 10
 n_batches    = cld(n_train, batch_size)
@@ -132,7 +133,7 @@ G = NetworkConditionalGlow(1, n_in, n_hidden,  L, K; rb_activation=ReLUlayer(), 
 G = G |> device;
 
 # Optimizer
-opt = Flux.Optimiser(ClipNorm(clipnorm_val), ADAM(lr))
+opt = Flux.Optimiser(ExpDecay(lr, .99f0, n_batches*lr_step, 1f-6), ClipNorm(clipnorm_val), ADAM(lr))
 
 # Training logs 
 loss   = [];
@@ -232,7 +233,7 @@ for e=1:n_epochs
 		axis("off"); title("Posterior standard deviation") ;cb =colorbar(fraction=0.046, pad=0.04)
 
 		tight_layout()
-		fig_name = @strdict sum_net posterior_samples clipnorm_val noise_lev_x n_train e lr n_hidden L K batch_size    
+		fig_name = @strdict sum_net posterior_samples clipnorm_val noise_lev_x n_train e lr n_hidden L K batch_size lr_step 
 		safesave(joinpath(plot_path, savename(fig_name; digits=6)*"_nf_sol_val.png"), fig); close(fig)
 			
 	    ############# Training metric logs
@@ -269,7 +270,7 @@ for e=1:n_epochs
 	    xlabel("Parameter Update") 
 
 		tight_layout()
-		fig_name = @strdict sum_net posterior_samples clipnorm_val noise_lev_x n_train e lr n_hidden L K batch_size
+		fig_name = @strdict sum_net posterior_samples clipnorm_val noise_lev_x n_train e lr n_hidden L K batch_size lr_step
 		safesave(joinpath(plot_path, savename(fig_name; digits=6)*"_trainin_log.png"), fig); close(fig)
 	end
 
@@ -295,7 +296,7 @@ for e=1:n_epochs
     if(mod(e,save_every)==0) 
          # Saving parameters and logs
 		Params = get_params(G) |> cpu
-		save_dict = @strdict n_in sum_net clipnorm_val n_train e noise_lev_x lr n_hidden L K Params loss logdet l2_cm ssim loss_val logdet_val l2_cm_val ssim_val batch_size  
+		save_dict = @strdict n_in sum_net clipnorm_val n_train e noise_lev_x lr n_hidden L K Params loss logdet l2_cm ssim loss_val logdet_val l2_cm_val ssim_val batch_size lr_step
 		@tagsave(
 			joinpath(datadir(), savename(save_dict, "jld2"; digits=6)),
 			save_dict;
