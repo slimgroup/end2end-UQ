@@ -96,8 +96,9 @@ vmin = minimum(X_train)
 # Training hyperparameters 
 device = gpu
 lr = 4f-3
-lr_step   = 10
-clipnorm_val = 20f0
+lr_step   = 40
+lr_rate = 0.75f0
+clipnorm_val = 2.5f0
 noise_lev_x  = 0.01f0
 batch_size   = 10
 n_batches    = cld(n_train, batch_size)
@@ -112,13 +113,14 @@ n_condmean = 25
 posterior_samples = 128
 
 # Create summary network
-sum_net = false
+sum_net = true
 h1 = nothing
 n_in = 1
+unet_levels = 3
 if sum_net
 	h1 = Unet(1, 1, unet_levels);
-	trainmode!(h2, true)
-	h1 = FluxBlock(Chain(h2))
+	trainmode!(h1, true)
+	h1 = FluxBlock(Chain(h1))
 	h1 = h1 |> device
 end
 
@@ -133,7 +135,7 @@ G = NetworkConditionalGlow(1, n_in, n_hidden,  L, K; rb_activation=ReLUlayer(), 
 G = G |> device;
 
 # Optimizer
-opt = Flux.Optimiser(ExpDecay(lr, .99f0, n_batches*lr_step, 1f-6), ClipNorm(clipnorm_val), ADAM(lr))
+opt = Flux.Optimiser(ExpDecay(lr, lr_rate, n_batches*lr_step, 1f-6), ClipNorm(clipnorm_val), ADAM(lr))
 
 # Training logs 
 loss   = [];
@@ -162,7 +164,7 @@ for e=1:n_epochs
 	        append!(logdet, -lgdet / N) # logdet is internally normalized by batch size
 
 	        # Set gradients of flow and summary network
-	        G.backward(Zx / batch_size, Zx, Zy; C_save=Y)
+	        G.backward(Zx / batch_size, Zx, Zy; C_save=Y|> device)
 
 	        for p in get_params(G) 
 	          Flux.update!(opt,p.data,p.grad)
@@ -192,7 +194,7 @@ for e=1:n_epochs
     append!(ssim_val, cm_ssim_val)
     append!(l2_cm_val, cm_l2_val)
 
-    if(mod(e,save_every)==0) 
+    if(mod(e,plot_every)==0) 
 	    testmode!(h1, true)
 	    
 	    x      = X_val[:,:,:,sample_viz:sample_viz];
@@ -233,7 +235,7 @@ for e=1:n_epochs
 		axis("off"); title("Posterior standard deviation") ;cb =colorbar(fraction=0.046, pad=0.04)
 
 		tight_layout()
-		fig_name = @strdict sum_net posterior_samples clipnorm_val noise_lev_x n_train e lr n_hidden L K batch_size lr_step 
+		fig_name = @strdict sum_net unet_levels posterior_samples clipnorm_val noise_lev_x n_train e lr lr_step lr_rate n_hidden L K batch_size lr_step 
 		safesave(joinpath(plot_path, savename(fig_name; digits=6)*"_nf_sol_val.png"), fig); close(fig)
 			
 	    ############# Training metric logs
@@ -270,38 +272,38 @@ for e=1:n_epochs
 	    xlabel("Parameter Update") 
 
 		tight_layout()
-		fig_name = @strdict sum_net posterior_samples clipnorm_val noise_lev_x n_train e lr n_hidden L K batch_size lr_step
+		fig_name = @strdict sum_net unet_levels posterior_samples clipnorm_val noise_lev_x n_train e lr lr_step lr_rate n_hidden L K batch_size lr_step
 		safesave(joinpath(plot_path, savename(fig_name; digits=6)*"_trainin_log.png"), fig); close(fig)
 	end
 
 	#save params every 4 epochs
+    if(mod(e,save_every)==0) 
+         # Saving parameters and logs
+     	unet_model = G.summary_net.model;
+        unet_model = unet_model |> cpu;
+        G_save = deepcopy(G);
+        reset!(G_save.summary_net); # clear params to not save twice
+
+		Params = get_params(G_save) |> cpu;
+		save_dict = @strdict unet_model unet_levels n_in sum_net clipnorm_val n_train e noise_lev_x lr lr_step lr_rate n_hidden L K Params loss logdet l2_cm ssim loss_val logdet_val l2_cm_val ssim_val batch_size;
+	
+		@tagsave(
+			joinpath(datadir(), savename(save_dict, "bson"; digits=6)),
+			save_dict;
+			safe=true
+		);
+		G = G |> gpu;
+    end
+
   #   if(mod(e,save_every)==0) 
   #        # Saving parameters and logs
-  #    	unet_model = G.summary_net.model
-  #       unet_model = unet_model |> cpu
-  #       G_save = deepcopy(G)
-  #       reset!(G_save.summary_net) # clear params to not save twice
-
-		# Params = get_params(G_save) |> cpu
-		# save_dict = @strdict unet_model n_in sum_net clipnorm_val n_train e noise_lev_x lr n_hidden L K Params loss logdet l2_cm ssim loss_test logdet_test l2_cm_test ssim_test batch_size  
-	
+		# Params = get_params(G) |> cpu
+		# save_dict = @strdict n_in sum_net clipnorm_val n_train e noise_lev_x lr n_hidden L K Params loss logdet l2_cm ssim loss_val logdet_val l2_cm_val ssim_val batch_size lr_step
 		# @tagsave(
-		# 	joinpath(datadir(), savename(save_dict, "bson"; digits=6)),
+		# 	joinpath(datadir(), savename(save_dict, "jld2"; digits=6)),
 		# 	save_dict;
 		# 	safe=true
 		# )
-		# G = G |> gpu
   #   end
-
-    if(mod(e,save_every)==0) 
-         # Saving parameters and logs
-		Params = get_params(G) |> cpu
-		save_dict = @strdict n_in sum_net clipnorm_val n_train e noise_lev_x lr n_hidden L K Params loss logdet l2_cm ssim loss_val logdet_val l2_cm_val ssim_val batch_size lr_step
-		@tagsave(
-			joinpath(datadir(), savename(save_dict, "jld2"; digits=6)),
-			save_dict;
-			safe=true
-		)
-    end
 end
 
