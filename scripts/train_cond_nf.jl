@@ -56,6 +56,7 @@ function get_loss(G, X_batch, Y_batch; device=gpu, batch_size=16)
     	y_i = Y_batch[:,:,:,(i-1)*batch_size+1 : i*batch_size] 
 
     	x_i .+= noise_lev_x*randn(Float32, size(x_i)); 
+		y_i .+= noise_lev_y*randn(Float32, size(y_i)); 
 
     	Zx, Zy, lgdet = G.forward(x_i|> device, y_i|> device) |> cpu;
     	l2_total     += norm(Zx)^2 / (N*batch_size)
@@ -96,11 +97,12 @@ vmin = minimum(X_train)
 # Training hyperparameters 
 device = gpu
 lr = 4f-3
-lr_step   = 40
+lr_step   = 30
 lr_rate = 0.75f0
-clipnorm_val = 2.5f0
-noise_lev_x  = 0.01f0
-batch_size   = 10
+clipnorm_val = 1f0
+noise_lev_x  = 0.005f0
+noise_lev_y  = 0.005f0
+batch_size   = 20
 n_batches    = cld(n_train, batch_size)
 n_epochs     = 500
 
@@ -155,6 +157,7 @@ for e=1:n_epochs
 	        X = X_train[:, :, :, idx_e[:,b]];
 	        Y = Y_train[:, :, :, idx_e[:,b]];
 	        X .+= noise_lev_x*randn(Float32, size(X));
+			Y .+= noise_lev_y*randn(Float32, size(Y));
       
 	        # Forward pass of normalizing flow
 	        Zx, Zy, lgdet = G.forward(X|> device, Y|> device)
@@ -235,7 +238,7 @@ for e=1:n_epochs
 		axis("off"); title("Posterior standard deviation") ;cb =colorbar(fraction=0.046, pad=0.04)
 
 		tight_layout()
-		fig_name = @strdict sum_net unet_levels posterior_samples clipnorm_val noise_lev_x n_train e lr lr_step lr_rate n_hidden L K batch_size lr_step 
+		fig_name = @strdict sum_net unet_levels posterior_samples clipnorm_val noise_lev_x noise_lev_y n_train e lr lr_step lr_rate n_hidden L K batch_size lr_step 
 		safesave(joinpath(plot_path, savename(fig_name; digits=6)*"_nf_sol_val.png"), fig); close(fig)
 			
 	    ############# Training metric logs
@@ -272,7 +275,7 @@ for e=1:n_epochs
 	    xlabel("Parameter Update") 
 
 		tight_layout()
-		fig_name = @strdict sum_net unet_levels posterior_samples clipnorm_val noise_lev_x n_train e lr lr_step lr_rate n_hidden L K batch_size lr_step
+		fig_name = @strdict sum_net unet_levels posterior_samples clipnorm_val noise_lev_x noise_lev_y n_train e lr lr_step lr_rate n_hidden L K batch_size lr_step
 		safesave(joinpath(plot_path, savename(fig_name; digits=6)*"_trainin_log.png"), fig); close(fig)
 	end
 
@@ -285,7 +288,7 @@ for e=1:n_epochs
         reset!(G_save.summary_net); # clear params to not save twice
 
 		Params = get_params(G_save) |> cpu;
-		save_dict = @strdict unet_model unet_levels n_in sum_net clipnorm_val n_train e noise_lev_x lr lr_step lr_rate n_hidden L K Params loss logdet l2_cm ssim loss_val logdet_val l2_cm_val ssim_val batch_size;
+		save_dict = @strdict unet_model unet_levels n_in sum_net clipnorm_val n_train e noise_lev_x noise_lev_y lr lr_step lr_rate n_hidden L K Params loss logdet l2_cm ssim loss_val logdet_val l2_cm_val ssim_val batch_size;
 	
 		@tagsave(
 			joinpath(datadir(), savename(save_dict, "bson"; digits=6)),
