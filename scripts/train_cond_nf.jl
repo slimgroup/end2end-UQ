@@ -127,9 +127,9 @@ if sum_net
 end
 
 # Create conditional network
-L = 3
-K = 9 
-n_hidden = 64
+K = 6
+L = 6
+n_hidden = 32
 low = 0.5f0
 
 Random.seed!(123);
