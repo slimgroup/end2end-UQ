@@ -102,7 +102,7 @@ lr_rate = 0.75f0
 clipnorm_val = 2.5f0
 noise_lev_x  = 0.005f0
 noise_lev_y  = 0.005f0
-batch_size   = 20
+batch_size   = 10
 n_batches    = cld(n_train, batch_size)
 n_epochs     = 500
 
