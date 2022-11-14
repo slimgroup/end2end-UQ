@@ -277,7 +277,7 @@ C = vcat(s,b) #correction Layer
 θ = Flux.params(C)
 
 # ADAM-W algorithm
-lr = 1f-6
+lr = 1f-1
 lr_step = 2
 num_batches = cld(nsrc, nssample)
 opt = Flux.Optimiser(
@@ -299,7 +299,7 @@ for iter=1:niterations
 
     # function value
     function f(z)
-        x = G1(z)[:,:,1,1]; c = S(x); v = R(c); v_up = u(v); dpred = F(v_up);
+        x = 120f0 * G1(z)[:,:,1,1]; c = S(x); v = R(c); v_up = u(v); dpred = F(v_up);
         global misfit = .5f0/sigma^2f0 * norm(dpred-dobs)^2f0/length(vcat(dobs...))
         #global prior = .5f0 * norm(z)^2f0/length(z)
         #global logdet = -log(abs(prod(C[1])))/length(C[1])
@@ -335,19 +335,19 @@ for iter=1:niterations
     ## save figure
     fig_name = @strdict iter snr nssample niterations nv nsrc nrec survey_indices lr lr_step
 
-    generative_samples = [G1(randn(Float32, n1))[:,:,1,1] for k = 1:100]
+    generative_samples = [120f0 * G1(randn(Float32, n1))[:,:,1,1] for k = 1:100]
     post_mean = mean(generative_samples)
     post_std = std(generative_samples)
     ssim_i = round(assess_ssim(post_mean, x_true),digits=2)
     mse_i = round(norm(x_true'-mean(generative_samples)')^2, digits=2)
     fig = figure(figsize=(20, 12)); 
-    subplot(2,4,1); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,1); imshow(120f0 * G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
-    subplot(2,4,2); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,2); imshow(120f0 * G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
-    subplot(2,4,3); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,3); imshow(120f0 * G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
-    subplot(2,4,4); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,4); imshow(120f0 * G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
     subplot(2,4,5); imshow(x_true', interpolation="none", vmin=20, vmax=120);
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("ground truth")
