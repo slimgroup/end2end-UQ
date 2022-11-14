@@ -277,7 +277,7 @@ C = vcat(s,b) #correction Layer
 θ = Flux.params(C)
 
 # ADAM-W algorithm
-lr = 1f-1
+lr = 1f-3
 lr_step = 2
 num_batches = cld(nsrc, nssample)
 opt = Flux.Optimiser(
