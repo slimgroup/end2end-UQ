@@ -251,7 +251,7 @@ Zy_fixed_g = G.forward(randn(Float32, n1[1], n1[2], 1, 1), reshape(g, n1[1], n1[
 G1 = ReverseConditionNet(G, Zy_fixed_g);
 
 #### start correction
-niter = 400          # 50 data pass
+niterations = 400          # 50 data pass
 
 ### Define result directory
 sim_name = "UQ"
@@ -275,6 +275,15 @@ b = zeros(Float32, prod(n1))
 s = ones(Float32, prod(n1))
 C = vcat(s,b) #correction Layer
 θ = Flux.params(C)
+
+# ADAM-W algorithm
+lr = 1f-6
+lr_step = 2
+num_batches = cld(nsrc, nssample)
+opt = Flux.Optimiser(
+        Flux.ExpDecay(lr, 0.9f0, num_batches * lr_step, 1.0f-6),
+        Flux.ADAM(lr),
+    )
 
 for iter=1:niterations
     rand_ns = [jitter(nsrc, nssample) for i = 1:nv]                             # select random source idx for each vintage
@@ -302,7 +311,7 @@ for iter=1:niterations
     end
 
     ## AD by Flux
-    @time grads = gradient(()->f(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end]), θ)
+    @time grads = gradient(()->f(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1)), θ)
     #@time grads = gradient(()->mean([f(C[1:prod(n1)].*z[i].+C[prod(n1)+1:end])/n_particles for i = 1:n_particles]), θ)
     for p in θ
         Flux.Optimise.update!(opt, p, grads[p])
@@ -316,7 +325,7 @@ for iter=1:niterations
     ProgressMeter.next!(prog; showvalues = [(:loss, fval), (:misfit, misfit), (:prior, prior), (:iter, iter), (:stepsize, step)])
 
     ### save intermediate results
-    save_dict = @strdict iter snr nssample z λ rand_ns step niterations nv nsrc nrec survey_indices hisloss hismisfit hisprior lr lr_step n_particles
+    save_dict = @strdict iter snr nssample λ rand_ns step niterations nv nsrc nrec survey_indices hisloss hismisfit hisprior lr lr_step
     @tagsave(
         joinpath(save_path, savename(save_dict, "jld2"; digits=6)),
         save_dict;
@@ -324,21 +333,21 @@ for iter=1:niterations
     )
 
     ## save figure
-    fig_name = @strdict iter snr nssample niterations nv nsrc nrec survey_indices lr lr_step n_particles
+    fig_name = @strdict iter snr nssample niterations nv nsrc nrec survey_indices lr lr_step
 
-    generative_samples = [G1(randn(Float32, prod(n1)))[:,:,1,1] for k = 1:100]
+    generative_samples = [G1(randn(Float32, n1))[:,:,1,1] for k = 1:100]
     post_mean = mean(generative_samples)
     post_std = std(generative_samples)
     ssim_i = round(assess_ssim(post_mean, x_true),digits=2)
     mse_i = round(norm(x_true'-mean(generative_samples)')^2, digits=2)
     fig = figure(figsize=(20, 12)); 
-    subplot(2,4,1); imshow(G1(C[1].*randn(Float32, prod(n1)))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,1); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
-    subplot(2,4,2); imshow(G1(C[1].*randn(Float32, prod(n1)))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,2); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
-    subplot(2,4,3); imshow(G1(C[1].*randn(Float32, prod(n1)))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,3); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
-    subplot(2,4,4); imshow(G1(C[1].*randn(Float32, prod(n1)))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
+    subplot(2,4,4); imshow(G1(reshape(C[1:prod(n1)].*randn(Float32, prod(n1)).+C[prod(n1)+1:end], n1))[:,:,1,1]', interpolation="none", vmin=20, vmax=120)
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("generative samples")
     subplot(2,4,5); imshow(x_true', interpolation="none", vmin=20, vmax=120);
     axis("off");  colorbar(fraction=0.046, pad=0.04);title("ground truth")
